@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/dcosapp/gocmdb/server/cloud"
+	_ "github.com/dcosapp/gocmdb/server/cloud/plugins"
 	"github.com/dcosapp/gocmdb/server/models"
 	_ "github.com/dcosapp/gocmdb/server/routers"
 	"os"
@@ -13,7 +15,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func mainm() {
+func main() {
 	// 设置命令行参数
 	h := flag.Bool("h", false, "help")
 	help := flag.Bool("help", false, "help")
@@ -58,7 +60,23 @@ func mainm() {
 			if platform.IsEnable() {
 				fmt.Println(platform, now)
 			}
+			if sdk, ok := cloud.DefaultManager.Cloud(platform.Type); !ok {
+				fmt.Println("云平台未注册")
+			} else {
+				sdk.Init(platform.Addr, platform.Region, platform.AccessKey, platform.SecretKey)
 
+				if err := sdk.TestConnect(); err != nil {
+					fmt.Println("测试链接失败:", err.Error())
+					models.DefaultCloudPlatformManager.SyncInfo(platform, now, fmt.Sprintf("测试连接失败,%s", err.Error()))
+				} else {
+					for _, instance := range sdk.GetInstance() {
+						models.DefaultVirtualMachineManager.SyncInstance(instance, platform)
+						fmt.Printf("%#v", instance)
+					}
+					models.DefaultVirtualMachineManager.SyncInstacneStatus(now, platform)
+					models.DefaultCloudPlatformManager.SyncInfo(platform, now, "同步成功")
+				}
+			}
 		}
 
 	}

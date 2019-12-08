@@ -7,6 +7,8 @@ import (
 )
 
 func init() {
+	// /
+	beego.Router("/", &controllers.HomePageController{})
 	// homepage/
 	beego.AutoRouter(&controllers.HomePageController{})
 	// /dashboardpage/

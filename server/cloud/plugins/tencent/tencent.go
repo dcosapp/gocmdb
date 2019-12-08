@@ -52,21 +52,67 @@ func (t *TencentCloud) TestConnect() error {
 
 // 获取实例
 func (t *TencentCloud) GetInstance() []*cloud.Instance {
-	var limit int64 = 100
+	var (
+		offset int64 = 0
+		limit  int64 = 100
+		total  int64 = 1
+		rt     []*cloud.Instance
+	)
+
+	for offset < total {
+		var instances []*cloud.Instance
+		total, instances = t.getInstanceByOffsetLimit(offset, limit)
+
+		if offset == 0 {
+			rt = make([]*cloud.Instance, 0, total)
+		}
+		rt = append(rt, instances...)
+		offset += limit
+	}
+
+	return rt
+}
+
+func (t *TencentCloud) transformStatus(status string) string {
+	smap := map[string]string{
+		"PENDING":       cloud.StatusPending,
+		"LAUNCH_FAILED": cloud.StatusLaunchFailed,
+		"RUNNING":       cloud.StatusRunning,
+		"STOPPED":       cloud.StatusStopped,
+		"STARTING":      cloud.StatusStarting,
+		"TOPPING":       cloud.StatusStopping,
+		"REBOOTING":     cloud.StatusRebooting,
+		"TERMINATING":   cloud.StatusTerminating,
+		"SHUTDOWN":      cloud.StatusShutdown,
+	}
+
+	if rt, ok := smap[status]; ok {
+		return rt
+	}
+	return cloud.StatusUnknown
+}
+
+func (t *TencentCloud) getInstanceByOffsetLimit(offset, limit int64) (int64, []*cloud.Instance) {
 	client, err := cvm.NewClient(t.credential, t.region, t.profile)
 	if err != nil {
-		return nil
+		return 0, nil //todo 通过log记录
 	}
+
 	request := cvm.NewDescribeInstancesRequest()
 	request.Limit = &limit
+	request.Offset = &offset
 
 	response, err := client.DescribeInstances(request)
 	if err != nil {
-		return nil
+		return 0, nil
 	}
 
-	instances := make([]*cloud.Instance, *response.Response.TotalCount)
-	for index, instance := range response.Response.InstanceSet {
+	total := *response.Response.TotalCount
+	instances := response.Response.InstanceSet
+
+	rt := make([]*cloud.Instance, len(instances))
+
+	for index, instance := range instances {
 		publicAddrs := make([]string, len(instance.PublicIpAddresses))
 		privateAddrs := make([]string, len(instance.PrivateIpAddresses))
 		for i, addr := range instance.PublicIpAddresses {
@@ -75,34 +121,56 @@ func (t *TencentCloud) GetInstance() []*cloud.Instance {
 		for i, addr := range instance.PrivateIpAddresses {
 			privateAddrs[i] = *addr
 		}
-		instances[index] = &cloud.Instance{
-			Key:          *instance.InstanceId,
-			UUID:         *instance.Uuid,
+		rt[index] = &cloud.Instance{
+			UUID:         *instance.InstanceId,
 			Name:         *instance.InstanceName,
 			OS:           *instance.OsName,
 			CPU:          int(*instance.CPU),
-			Memory:       int(*instance.Memory),
+			Memory:       *instance.Memory * 1024,
 			PublicAddrs:  publicAddrs,
 			PrivateAddrs: privateAddrs,
-			Status:       *instance.InstanceState,
+			Status:       t.transformStatus(*instance.InstanceState),
 			CreatedTime:  *instance.CreatedTime,
 			ExpiredTime:  *instance.ExpiredTime,
 		}
 	}
-	return instances
+	return total, rt
 }
 
 // 启动实例
-func (t *TencentCloud) StartInstance(string) error {
-	return nil
+func (t *TencentCloud) StartInstance(uuid string) error {
+	client, _ := cvm.NewClient(t.credential, t.region, t.profile)
+
+	request := cvm.NewStartInstancesRequest()
+	request.InstanceIds = []*string{&uuid}
+
+	_, err := client.StartInstances(request)
+
+	return err
 }
 
 // 停止实例
-func (t *TencentCloud) StopInstance(string) error {
-	return nil
+func (t *TencentCloud) StopInstance(uuid string) error {
+	client, _ := cvm.NewClient(t.credential, t.region, t.profile)
+
+	request := cvm.NewStopInstancesRequest()
+	request.InstanceIds = []*string{&uuid}
+
+	_, err := client.StopInstances(request)
+
+	return err
 }
-func (t *TencentCloud) RebootInstance(string) error {
-	return nil
+
+// 重启实例
+func (t *TencentCloud) RebootInstance(uuid string) error {
+	client, _ := cvm.NewClient(t.credential, t.region, t.profile)
+
+	request := cvm.NewRebootInstancesRequest()
+	request.InstanceIds = []*string{&uuid}
+
+	_, err := client.RebootInstances(request)
+
+	return err
 }
 
 func init() {

@@ -1,17 +1,33 @@
 package cloud
 
+const (
+	StatusPending      = "创建中"
+	StatusLaunchFailed = "创建失败"
+	StatusRunning      = "运行中"
+	StatusStopped      = "已停止"
+	StatusStarting     = "开机中"
+	StatusStopping     = "停止中"
+	StatusRebooting    = "重启中"
+	StatusTerminating  = "销毁中"
+	StatusUnknown      = "未知"
+	StatusShutdown     = "停止待销毁"
+)
+
 type Instance struct {
-	Key          string
 	UUID         string
 	Name         string
 	OS           string
 	CPU          int
-	Memory       int
+	Memory       int64
 	PublicAddrs  []string
 	PrivateAddrs []string
 	Status       string
 	CreatedTime  string
 	ExpiredTime  string
+}
+
+func (i *Instance) String() string {
+	return i.Name
 }
 
 type ICloud interface {

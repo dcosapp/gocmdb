@@ -226,10 +226,11 @@ func (c *VirtualMachineController) List() {
 	draw, _ := c.GetInt("draw")
 	start, _ := c.GetInt64("start")
 	length, _ := c.GetInt("length")
+	platform, _ := c.GetInt("platform")
 	q := strings.TrimSpace(c.GetString("q"))
 
 	// []*VirtualMachine, total, queryTotal
-	result, total, queryTotal := models.DefaultVirtualMachineManager.Query(q, start, length)
+	result, total, queryTotal := models.DefaultVirtualMachineManager.Query(q, platform, start, length)
 	c.Data["json"] = map[string]interface{}{
 		"code":            200,
 		"text":            "获取成功",
@@ -242,27 +243,69 @@ func (c *VirtualMachineController) List() {
 }
 
 func (c *VirtualMachineController) Stop() {
+	pk, _ := c.GetInt("pk")
+	if vm := models.DefaultVirtualMachineManager.GetById(pk); vm != nil {
+		if sdk, ok := cloud.DefaultManager.Cloud(vm.Platform.Type); ok {
+			sdk.Init(vm.Platform.Addr, vm.Platform.Region, vm.Platform.AccessKey, vm.Platform.SecretKey)
+			if sdk.StopInstance(vm.UUID) == nil {
+				c.Data["json"] = map[string]interface{}{
+					"code":   200,
+					"text":   "关机成功",
+					"result": nil,
+				}
+				c.ServeJSON()
+			}
+		}
+	}
 	c.Data["json"] = map[string]interface{}{
-		"code":   200,
-		"text":   "关机成功",
+		"code":   400,
+		"text":   "关机失败",
 		"result": nil,
 	}
 	c.ServeJSON()
 }
 
 func (c *VirtualMachineController) Start() {
+	pk, _ := c.GetInt("pk")
+	if vm := models.DefaultVirtualMachineManager.GetById(pk); vm != nil {
+		if sdk, ok := cloud.DefaultManager.Cloud(vm.Platform.Type); ok {
+			sdk.Init(vm.Platform.Addr, vm.Platform.Region, vm.Platform.AccessKey, vm.Platform.SecretKey)
+			if sdk.StartInstance(vm.UUID) == nil {
+				c.Data["json"] = map[string]interface{}{
+					"code":   200,
+					"text":   "开机成功",
+					"result": nil,
+				}
+				c.ServeJSON()
+			}
+		}
+	}
 	c.Data["json"] = map[string]interface{}{
-		"code":   200,
-		"text":   "开机成功",
+		"code":   400,
+		"text":   "开机失败",
 		"result": nil,
 	}
 	c.ServeJSON()
 }
 
 func (c *VirtualMachineController) Restart() {
+	pk, _ := c.GetInt("pk")
+	if vm := models.DefaultVirtualMachineManager.GetById(pk); vm != nil {
+		if sdk, ok := cloud.DefaultManager.Cloud(vm.Platform.Type); ok {
+			sdk.Init(vm.Platform.Addr, vm.Platform.Region, vm.Platform.AccessKey, vm.Platform.SecretKey)
+			if sdk.RebootInstance(vm.UUID) == nil {
+				c.Data["json"] = map[string]interface{}{
+					"code":   200,
+					"text":   "重启成功",
+					"result": nil,
+				}
+				c.ServeJSON()
+			}
+		}
+	}
 	c.Data["json"] = map[string]interface{}{
-		"code":   200,
-		"text":   "重启成功",
+		"code":   400,
+		"text":   "重启失败",
 		"result": nil,
 	}
 	c.ServeJSON()

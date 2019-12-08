@@ -3,7 +3,7 @@
     jQuery(document).ready(function () {
         // table style
         var table = jQuery("#table").DataTable({
-            dom: '<"row"<"col-6" l><"col-5" f><"#buttons.col-1">>t<"row"<"col-6"i><"col-6"p>>',
+            dom: '<"row"<"col-5" l><"col-3" f><"#buttons.col-3">>t<"row"<"col-6"i><"col-6"p>>',
             serverSide: true,
             ajax: {
                 url: "{{ urlfor `VirtualMachineController.List` }}",
@@ -12,7 +12,8 @@
                         draw: data.draw,
                         start: data.start,
                         length: data.length,
-                        q: data.search.value
+                        q: data.search.value,
+                        platform: jQuery("select.query").val()
                     };
                 },
                 dataSrc: "result"
@@ -25,7 +26,7 @@
                 },
                 {
                     data: function (row) {
-                        return htmlEncode(row["platform"]);
+                        return htmlEncode(row["platform"]["name"]);
                     }
                 },
                 {
@@ -35,7 +36,7 @@
                 },
                 {
                     data: function (row) {
-                        return htmlEncode(row["cpu"] + "/" + row["mem"]);
+                        return htmlEncode(row["cpu"] + "C/" + row["mem"] + "MB");
                     }
                 },
                 {
@@ -55,7 +56,13 @@
                 },
                 {
                     data: function (row) {
-                        return htmlEncode(row["created_time"] + "/" + row["deleted_time"]);
+                        var delete_time = row["vm_expired_time"];
+                        if (delete_time == null) {
+                            return htmlEncode(jQuery.formatDateTime("yy-mm-dd hh:ii:ss", new Date(row["vm_created_time"])) + "/" + "按需过期")
+                        }
+                        return htmlEncode(jQuery.formatDateTime("yy-mm-dd hh:ii:ss", new Date(row["vm_created_time"])) + "/" +
+                            jQuery.formatDateTime("yy-mm-dd hh:ii:ss", new Date(row["vm_expired_time"]))
+                        )
                     }
                 },
                 {
@@ -76,7 +83,35 @@
         // draw button
         table.on("draw", function () {
             if (!jQuery("#buttons").attr("initd")) {
-                jQuery("#buttons").attr("initd", "initd");
+                jQuery("#buttons").attr("initd", "initd").html('<form><div class="form-group row"><label class="col-4 col-form-label col-form-label-sm text-right">云平台: </label><div class="col-6"><select class="form-control query form-control-sm"></select></div></div></form>');
+                jQuery("select.query").select2({
+                    ajax: {
+                        url: '{{ urlfor `CloudPlatformController.List`}}',
+                        data: function (params) {
+                            return {
+                                q: params.term
+                            };
+                        },
+                        processResults: function (response) {
+                            var results = [];
+                            if (response['code'] === 200) {
+                                results.push({
+                                    id: -1,
+                                    text: "ALL"
+                                });
+                                jQuery.each(response["result"], function (index, value) {
+                                    results.push({
+                                        id: value["id"],
+                                        text: value["name"]
+                                    })
+                                })
+                            }
+                            return {
+                                results: results
+                            }
+                        }
+                    }
+                })
             }
         });
 
@@ -86,6 +121,12 @@
             table.ajax.reload(null, false)
         };
 
-        // setInterval(window["reload_table"], 10000);
+        jQuery(document).on("change", "select.query", function () {
+            table.ajax.reload(null, false)
+        });
+
+        setInterval(function () {
+            table.ajax.reload(null, false)
+        }, 10 * 1000);
     });
 </script>

@@ -2,6 +2,8 @@ package models
 
 import (
 	"github.com/astaxie/beego/orm"
+	"github.com/dcosapp/gocmdb/server/cloud"
+	"strings"
 	"time"
 )
 
@@ -20,6 +22,7 @@ type CloudPlatform struct {
 	DeletedTime *time.Time `orm:"column(deleted_time);type(datetime);null;default(null);"json:"-"`
 	User        *User      `orm:"column(user);rel(fk);"json:"user"`
 	Status      int        `orm:"column(status);"json:"status"`
+	Msg         string     `orm:"column(msg);size(1024);"json:"msg"`
 
 	VirtualMachines []*VirtualMachine `orm:"reverse(many);"json:"virtual_machines"`
 }
@@ -50,7 +53,7 @@ func (m *CloudPlatformManager) Query(q string, start int64, length int) ([]*Clou
 		qtotal, _ = queryset.SetCond(condition).Count()
 	}
 	var result []*CloudPlatform
-	_, _ = queryset.SetCond(condition).Limit(length).Offset(start).All(&result)
+	_, _ = queryset.SetCond(condition).RelatedSel().Limit(length).Offset(start).All(&result)
 	return result, total, qtotal
 }
 
@@ -61,6 +64,13 @@ func (m *CloudPlatformManager) GetByName(name string) *CloudPlatform {
 		return cloud
 	}
 	return nil
+}
+
+func (m *CloudPlatformManager) SyncInfo(platform *CloudPlatform, now time.Time, msg string) error {
+	platform.SyncedTime = &now
+	platform.Msg = msg
+	_, err := orm.NewOrm().Update(platform)
+	return err
 }
 
 func (m *CloudPlatformManager) GetById(id int) *CloudPlatform {
@@ -135,7 +145,7 @@ type VirtualMachine struct {
 	Name          string         `orm:"column(name);size(64);"json:"name"`
 	CPU           int            `orm:"column(cpu);"json:"cpu"`
 	Mem           int64          `orm:"column(mem);"json:"mem"`
-	OS            string         `orm:"column(os);size(128);";json:"os"`
+	OS            string         `orm:"column(os);size(128);"json:"os"`
 	PrivateAddrs  string         `orm:"column(private_addrs);size(1024);"json:"private_addrs"`
 	PublicAddrs   string         `orm:"column(public_addrs);size(1024);"json:"public_addrs"`
 	Status        string         `orm:"column(status);size(32);"json:"status"`
@@ -150,14 +160,13 @@ type VirtualMachine struct {
 type VirtualMachineManager struct {
 }
 
-func (m *VirtualMachineManager) Query(q string, start int64, length int) ([]*VirtualMachine, int64, int64) {
+func (m *VirtualMachineManager) Query(q string, platform int, start int64, length int) ([]*VirtualMachine, int64, int64) {
 	ormer := orm.NewOrm()
 	queryset := ormer.QueryTable(&VirtualMachine{})
 	condition := orm.NewCondition()
 	condition = condition.And("deleted_time__isnull", true)
 	total, _ := queryset.SetCond(condition).Count()
 
-	qtotal := total
 	if q != "" {
 		query := orm.NewCondition()
 		query = query.Or("name__icontains", q)
@@ -165,28 +174,67 @@ func (m *VirtualMachineManager) Query(q string, start int64, length int) ([]*Vir
 		query = query.Or("private_addrs__icontains", q)
 		query = query.Or("os__icontains", q)
 		condition = condition.AndCond(query)
+	}
 
-		qtotal, _ = queryset.SetCond(condition).Count()
+	if platform > 0 {
+		condition = condition.And("platform__exact", platform)
 	}
 	var result []*VirtualMachine
 
-	_, _ = queryset.SetCond(condition).Limit(length).Offset(start).All(&result)
+	qtotal, _ := queryset.SetCond(condition).Count()
+	_, _ = queryset.SetCond(condition).RelatedSel().Limit(length).Offset(start).All(&result)
 	return result, total, qtotal
 }
 
 func (m *VirtualMachineManager) GetByName(name string) *VirtualMachine {
-	cloud := &VirtualMachine{Name: name, DeletedTime: nil}
-	err := orm.NewOrm().QueryTable(&VirtualMachine{}).Filter("Name__exact", name).Filter("deleted_time__isnull", true).One(cloud)
+	vm := &VirtualMachine{}
+	err := orm.NewOrm().QueryTable(VirtualMachine{}).Filter("Name__exact", name).Filter("deleted_time__isnull", true).One(vm)
 	if err == nil {
-		return cloud
+		return vm
+	}
+	return nil
+}
+
+func (m *VirtualMachineManager) GetById(id int) *VirtualMachine {
+	vm := &VirtualMachine{}
+	err := orm.NewOrm().QueryTable(VirtualMachine{}).RelatedSel().Filter("Id__exact", id).Filter("deleted_time__isnull", true).One(vm)
+	if err == nil {
+		return vm
 	}
 	return nil
 }
 
 func (m *VirtualMachineManager) DeleteById(pk int) (int64, error) {
 	now := time.Now()
-	result, err := orm.NewOrm().QueryTable(&VirtualMachine{}).Filter("Id__exact", pk).Update(orm.Params{"DeletedTime": &now})
+	result, err := orm.NewOrm().QueryTable(&VirtualMachine{}).RelatedSel().Filter("Id__exact", pk).Update(orm.Params{"DeletedTime": &now})
 	return result, err
+}
+
+func (m *VirtualMachineManager) SyncInstance(instance *cloud.Instance, platform *CloudPlatform) {
+	ormer := orm.NewOrm()
+	vm := &VirtualMachine{UUID: instance.UUID, Platform: platform}
+
+	// 是否创建, id, err
+	if _, _, err := ormer.ReadOrCreate(vm, "UUID", "Platform"); err != nil {
+		return
+	}
+	vm.Name = instance.Name
+	vm.OS = instance.OS
+	vm.CPU = instance.CPU
+	vm.Mem = instance.Memory
+	vm.Status = instance.Status
+	vm.VmCreatedTime = instance.CreatedTime
+	vm.VmExpiredTime = instance.ExpiredTime
+	vm.PublicAddrs = strings.Join(instance.PublicAddrs, ",")
+	vm.PrivateAddrs = strings.Join(instance.PrivateAddrs, ",")
+	_, _ = ormer.Update(vm)
+}
+
+func (m *VirtualMachineManager) SyncInstacneStatus(now time.Time, platform *CloudPlatform) {
+	orm.NewOrm().QueryTable(&VirtualMachine{}).Filter("Platform__exact", platform).Filter("UpdatedTime__lt",
+		now).Update(orm.Params{"DeletedTime": now})
+	orm.NewOrm().QueryTable(&VirtualMachine{}).Filter("Platform__exact", platform).Filter("UpdatedTime__gt",
+		now).Update(orm.Params{"DeletedTime": nil})
 }
 
 func NewVirtualMachineManager() *VirtualMachineManager {

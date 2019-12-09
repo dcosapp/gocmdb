@@ -55,7 +55,8 @@ func NewUserManager() *UserManager {
 
 // 通过id来查询用户
 func (m *UserManager) GetById(id int) *User {
-	user := &User{Id: id, DeletedTime: nil} // 只查询没有被逻辑删除的数据
+	user := &User{Id: id, DeletedTime: nil}
+	// 只查询没有被逻辑删除的数据
 	err := orm.NewOrm().QueryTable(user).Filter("Id__exact", id).Filter("DeletedTime__isnull", true).One(user)
 	if err == nil {
 		_, _ = orm.NewOrm().LoadRelated(user, "Token")
@@ -74,6 +75,7 @@ func (m *UserManager) GetByName(name string) *User {
 	return nil
 }
 
+// 查询用户
 func (m *UserManager) Query(q string, start int64, length int, user *User) ([]*User, int64, int64) {
 	o := orm.NewOrm()
 	queryset := o.QueryTable(&User{})
@@ -104,11 +106,13 @@ func (m *UserManager) Query(q string, start int64, length int, user *User) ([]*U
 	return users, total, qtotal
 }
 
+// 设置用户状态(0 UnLock, 1 Lock)
 func (m *UserManager) SetStatusById(pk, status int) error {
 	_, err := orm.NewOrm().QueryTable(&User{}).Filter("id__exact", pk).Update(orm.Params{"status": status})
 	return err
 }
 
+// 根据ID删除用户(逻辑删除)
 func (m *UserManager) DeleteById(pk int) (int64, error) {
 	now := time.Now()
 	result, err := orm.NewOrm().QueryTable(&User{}).Filter("Id__exact", pk).Update(orm.Params{"DeletedTime": &now})
@@ -134,7 +138,7 @@ func NewTokenManager() *TokenManager {
 	return &TokenManager{}
 }
 
-// 通过accessKey和secretKey来获取token
+// 通过accessKey和secretKey来校验token
 func (m *TokenManager) GetByKey(accessKey, secretKey string) *Token {
 	token := &Token{AccessKey: accessKey, SecretKey: secretKey}
 	o := orm.NewOrm()
@@ -146,6 +150,7 @@ func (m *TokenManager) GetByKey(accessKey, secretKey string) *Token {
 	return nil
 }
 
+// 为用户生成token
 func (m *TokenManager) GenerateByUser(user *User) *Token {
 	ormer := orm.NewOrm()
 	token := &Token{User: user}

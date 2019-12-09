@@ -9,6 +9,7 @@ type HomePageController struct {
 	LayoutController
 }
 
+// homepage/index
 func (c *HomePageController) Index() {
 	c.Redirect(beego.URLFor(beego.AppConfig.String("home")), http.StatusFound)
 }
@@ -17,6 +18,7 @@ type DashboardPageController struct {
 	LayoutController
 }
 
+// dashboardpage/index
 func (c *DashboardPageController) Index() {
 	c.Data["menu"] = "dashboard"
 	c.TplName = "dashboard_page/index.html"

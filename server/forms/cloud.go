@@ -134,5 +134,4 @@ func (c *CloudPlatformModifyForm) Valid(v *validation.Validation) {
 		}
 		sdk.GetInstance()
 	}
-
 }

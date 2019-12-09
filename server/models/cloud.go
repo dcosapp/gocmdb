@@ -34,6 +34,7 @@ func (p *CloudPlatform) IsEnable() bool {
 type CloudPlatformManager struct {
 }
 
+// 查询云平台
 func (m *CloudPlatformManager) Query(q string, start int64, length int) ([]*CloudPlatform, int64, int64) {
 	ormer := orm.NewOrm()
 	queryset := ormer.QueryTable(&CloudPlatform{})
@@ -57,6 +58,7 @@ func (m *CloudPlatformManager) Query(q string, start int64, length int) ([]*Clou
 	return result, total, qtotal
 }
 
+// 根据名称获取云平台
 func (m *CloudPlatformManager) GetByName(name string) *CloudPlatform {
 	cloud := &CloudPlatform{Name: name, DeletedTime: nil}
 	err := orm.NewOrm().QueryTable(&CloudPlatform{}).Filter("Name__exact", name).Filter("deleted_time__isnull", true).One(cloud)
@@ -66,6 +68,7 @@ func (m *CloudPlatformManager) GetByName(name string) *CloudPlatform {
 	return nil
 }
 
+// 更改同步时间与同步信息 (成功||失败)
 func (m *CloudPlatformManager) SyncInfo(platform *CloudPlatform, now time.Time, msg string) error {
 	platform.SyncedTime = &now
 	platform.Msg = msg
@@ -73,6 +76,7 @@ func (m *CloudPlatformManager) SyncInfo(platform *CloudPlatform, now time.Time, 
 	return err
 }
 
+// 根据id获取云平台
 func (m *CloudPlatformManager) GetById(id int) *CloudPlatform {
 	cloud := &CloudPlatform{Id: id, DeletedTime: nil}
 	err := orm.NewOrm().QueryTable(&CloudPlatform{}).Filter("Id__exact", id).Filter("deleted_time__isnull", true).One(cloud)
@@ -82,6 +86,7 @@ func (m *CloudPlatformManager) GetById(id int) *CloudPlatform {
 	return nil
 }
 
+// 创建云平台
 func (m *CloudPlatformManager) Create(name, typ, addr, accessKey, secretKey, region, remark string, user *User) (*CloudPlatform, error) {
 	ormer := orm.NewOrm()
 	result := &CloudPlatform{
@@ -100,6 +105,7 @@ func (m *CloudPlatformManager) Create(name, typ, addr, accessKey, secretKey, reg
 	return result, nil
 }
 
+// 修改云平台
 func (m *CloudPlatformManager) Modify(id int, name, typ, addr, region, accessKey, secretKey, remark string) (*CloudPlatform, error) {
 	platform := &CloudPlatform{Id: id}
 	ormer := orm.NewOrm()
@@ -109,6 +115,7 @@ func (m *CloudPlatformManager) Modify(id int, name, typ, addr, region, accessKey
 		platform.Type = typ
 		platform.Addr = addr
 		platform.Region = region
+		platform.Remark = remark
 		if accessKey != "" {
 			platform.AccessKey = accessKey
 		}
@@ -122,12 +129,14 @@ func (m *CloudPlatformManager) Modify(id int, name, typ, addr, region, accessKey
 	return &CloudPlatform{}, err
 }
 
+// 删除云平台(逻辑删除)
 func (m *CloudPlatformManager) DeleteById(pk int) (int64, error) {
 	now := time.Now()
 	result, err := orm.NewOrm().QueryTable(&CloudPlatform{}).Filter("Id__exact", pk).Update(orm.Params{"DeletedTime": &now})
 	return result, err
 }
 
+// 设置是否锁定(0 Enable, 1 Disable)
 func (m *CloudPlatformManager) SetStatusById(pk, status int) error {
 	_, err := orm.NewOrm().QueryTable(&CloudPlatform{}).Filter("id__exact", pk).Update(orm.Params{"status": status})
 	return err
@@ -160,6 +169,7 @@ type VirtualMachine struct {
 type VirtualMachineManager struct {
 }
 
+// 查询虚拟机
 func (m *VirtualMachineManager) Query(q string, platform int, start int64, length int) ([]*VirtualMachine, int64, int64) {
 	ormer := orm.NewOrm()
 	queryset := ormer.QueryTable(&VirtualMachine{})
@@ -186,6 +196,7 @@ func (m *VirtualMachineManager) Query(q string, platform int, start int64, lengt
 	return result, total, qtotal
 }
 
+// 根据名称获取虚拟机
 func (m *VirtualMachineManager) GetByName(name string) *VirtualMachine {
 	vm := &VirtualMachine{}
 	err := orm.NewOrm().QueryTable(VirtualMachine{}).Filter("Name__exact", name).Filter("deleted_time__isnull", true).One(vm)
@@ -195,6 +206,7 @@ func (m *VirtualMachineManager) GetByName(name string) *VirtualMachine {
 	return nil
 }
 
+// 根据ID获取虚拟机
 func (m *VirtualMachineManager) GetById(id int) *VirtualMachine {
 	vm := &VirtualMachine{}
 	err := orm.NewOrm().QueryTable(VirtualMachine{}).RelatedSel().Filter("Id__exact", id).Filter("deleted_time__isnull", true).One(vm)
@@ -204,12 +216,14 @@ func (m *VirtualMachineManager) GetById(id int) *VirtualMachine {
 	return nil
 }
 
+// 当云平台被删除或禁用后，数据库中逻辑删除虚拟机
 func (m *VirtualMachineManager) DeleteById(pk int) (int64, error) {
 	now := time.Now()
-	result, err := orm.NewOrm().QueryTable(&VirtualMachine{}).RelatedSel().Filter("Id__exact", pk).Update(orm.Params{"DeletedTime": &now})
+	result, err := orm.NewOrm().QueryTable(&VirtualMachine{}).RelatedSel().Filter("Platform__exact", pk).Update(orm.Params{"DeletedTime": &now})
 	return result, err
 }
 
+// 虚拟机信息写入数据库
 func (m *VirtualMachineManager) SyncInstance(instance *cloud.Instance, platform *CloudPlatform) {
 	ormer := orm.NewOrm()
 	vm := &VirtualMachine{UUID: instance.UUID, Platform: platform}
@@ -230,6 +244,7 @@ func (m *VirtualMachineManager) SyncInstance(instance *cloud.Instance, platform 
 	_, _ = ormer.Update(vm)
 }
 
+// 虚拟机状态写入数据库
 func (m *VirtualMachineManager) SyncInstacneStatus(now time.Time, platform *CloudPlatform) {
 	orm.NewOrm().QueryTable(&VirtualMachine{}).Filter("Platform__exact", platform).Filter("UpdatedTime__lt",
 		now).Update(orm.Params{"DeletedTime": now})

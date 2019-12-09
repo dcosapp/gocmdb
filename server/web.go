@@ -3,16 +3,48 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
+	"github.com/dcosapp/gocmdb/server/cloud"
 	_ "github.com/dcosapp/gocmdb/server/cloud/plugins"
 	"github.com/dcosapp/gocmdb/server/models"
 	_ "github.com/dcosapp/gocmdb/server/routers"
 	"github.com/dcosapp/gocmdb/server/utils"
-	"os"
-
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	"os"
+	"time"
 )
+
+func sync() {
+	for now := range time.Tick(10 * time.Second) {
+		// 获取所有云平台
+		platforms, _, _ := models.DefaultCloudPlatformManager.Query("", 0, 0)
+		for _, platform := range platforms {
+			// 云平台是否启用
+			if platform.IsEnable() {
+				// 云平台是否注册
+				if sdk, ok := cloud.DefaultManager.Cloud(platform.Type); !ok {
+					beego.Info("云平台未注册: ", platform.Name)
+				} else {
+					sdk.Init(platform.Addr, platform.Region, platform.AccessKey, platform.SecretKey)
+
+					if err := sdk.TestConnect(); err != nil {
+						beego.Error("连接测试失败: ", err.Error())
+						// 将失败信息同步至数据库
+						_ = models.DefaultCloudPlatformManager.SyncInfo(platform, now, fmt.Sprintf("连接测试失败,%s", err.Error()))
+					} else {
+						for _, instance := range sdk.GetInstance() {
+							models.DefaultVirtualMachineManager.SyncInstance(instance, platform)
+							beego.Debug("Platform: ", platform.Name, ";Instance: ", instance)
+						}
+						models.DefaultVirtualMachineManager.SyncInstacneStatus(now, platform)
+						_ = models.DefaultCloudPlatformManager.SyncInfo(platform, now, "同步成功")
+					}
+				}
+			}
+		}
+	}
+}
 
 func main() {
 	// 设置命令行参数
@@ -80,6 +112,7 @@ func main() {
 		_ = orm.RunSyncdb("default", *force, *verbose)
 		beego.Informational("同步数据库")
 	default:
+		go sync()
 		beego.Run()
 	}
 }

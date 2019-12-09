@@ -37,12 +37,12 @@ type AuthController struct {
 	base.BaseController
 }
 
-// 登录
+// auth/login
 func (c *AuthController) Login() {
 	DefaultManager.Login(c)
 }
 
-// 登出
+// auth/logout
 func (c *AuthController) Logout() {
 	DefaultManager.Logout(c)
 }

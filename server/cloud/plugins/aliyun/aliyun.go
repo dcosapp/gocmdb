@@ -6,31 +6,32 @@ import (
 	"github.com/dcosapp/gocmdb/server/cloud"
 )
 
-type Aliyun struct {
+type AliCloud struct {
 	addr      string
 	region    string
 	accessKey string
 	secretKey string
 }
 
-func (c *Aliyun) Type() string {
-	return "aliyun"
+func (a *AliCloud) Type() string {
+	return "AliCloud"
 }
 
-func (c *Aliyun) Name() string {
+func (a *AliCloud) Name() string {
 	return "阿里云"
 }
 
-func (c *Aliyun) Init(addr, region, accessKey, secretKey string) {
-	c.addr = addr
-	c.region = region
-	c.accessKey = accessKey
-	c.secretKey = secretKey
+// 初始化
+func (a *AliCloud) Init(addr, region, accessKey, secretKey string) {
+	a.addr = addr
+	a.region = region
+	a.accessKey = accessKey
+	a.secretKey = secretKey
 }
 
 // 连接测试
-func (t *Aliyun) TestConnect() error {
-	client, err := ecs.NewClientWithAccessKey(t.region, t.accessKey, t.secretKey)
+func (a *AliCloud) TestConnect() error {
+	client, err := ecs.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func (t *Aliyun) TestConnect() error {
 }
 
 // 获取实例
-func (t *Aliyun) GetInstance() []*cloud.Instance {
+func (a *AliCloud) GetInstance() []*cloud.Instance {
 	var (
 		offset = 1
 		limit  = 100
@@ -53,7 +54,7 @@ func (t *Aliyun) GetInstance() []*cloud.Instance {
 
 	for offset < total {
 		var instances []*cloud.Instance
-		total, instances = t.getInstanceByOffsetLimit(offset, limit)
+		total, instances = a.getInstanceByOffsetLimit(offset, limit)
 
 		if offset == 0 {
 			rt = make([]*cloud.Instance, 0, total)
@@ -65,7 +66,8 @@ func (t *Aliyun) GetInstance() []*cloud.Instance {
 	return rt
 }
 
-func (t *Aliyun) transformStatus(status string) string {
+// 状态自定义
+func (a *AliCloud) transformStatus(status string) string {
 	smap := map[string]string{
 		"Running":  cloud.StatusRunning,
 		"Stopped":  cloud.StatusStopped,
@@ -79,8 +81,9 @@ func (t *Aliyun) transformStatus(status string) string {
 	return cloud.StatusUnknown
 }
 
-func (t *Aliyun) getInstanceByOffsetLimit(offset, limit int) (int, []*cloud.Instance) {
-	client, err := ecs.NewClientWithAccessKey(t.region, t.accessKey, t.secretKey)
+// 获取实例
+func (a *AliCloud) getInstanceByOffsetLimit(offset, limit int) (int, []*cloud.Instance) {
+	client, err := ecs.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
 	if err != nil {
 		return 0, nil
 	}
@@ -108,7 +111,6 @@ func (t *Aliyun) getInstanceByOffsetLimit(offset, limit int) (int, []*cloud.Inst
 		if "" != instance.EipAddress.IpAddress {
 			publicAddrs = append(publicAddrs, instance.EipAddress.IpAddress)
 		}
-
 		publicAddrs = append(publicAddrs, instance.PublicIpAddress.IpAddress...)
 
 		privateAddrs = append(privateAddrs, instance.InnerIpAddress.IpAddress...)
@@ -122,7 +124,7 @@ func (t *Aliyun) getInstanceByOffsetLimit(offset, limit int) (int, []*cloud.Inst
 			Memory:       int64(instance.Memory),
 			PublicAddrs:  publicAddrs,
 			PrivateAddrs: privateAddrs,
-			Status:       t.transformStatus(instance.Status),
+			Status:       a.transformStatus(instance.Status),
 			CreatedTime:  instance.CreationTime,
 			ExpiredTime:  instance.ExpiredTime,
 		}
@@ -132,8 +134,8 @@ func (t *Aliyun) getInstanceByOffsetLimit(offset, limit int) (int, []*cloud.Inst
 }
 
 // 启动实例
-func (t *Aliyun) StartInstance(uuid string) error {
-	client, err := ecs.NewClientWithAccessKey(t.region, t.accessKey, t.secretKey)
+func (a *AliCloud) StartInstance(uuid string) error {
+	client, err := ecs.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
 	if err != nil {
 		return err
 	}
@@ -148,8 +150,8 @@ func (t *Aliyun) StartInstance(uuid string) error {
 }
 
 // 停止实例
-func (t *Aliyun) StopInstance(uuid string) error {
-	client, err := ecs.NewClientWithAccessKey(t.region, t.accessKey, t.secretKey)
+func (a *AliCloud) StopInstance(uuid string) error {
+	client, err := ecs.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
 	if err != nil {
 		return err
 	}
@@ -164,8 +166,8 @@ func (t *Aliyun) StopInstance(uuid string) error {
 }
 
 // 重启实例
-func (t *Aliyun) RebootInstance(uuid string) error {
-	client, err := ecs.NewClientWithAccessKey(t.region, t.accessKey, t.secretKey)
+func (a *AliCloud) RebootInstance(uuid string) error {
+	client, err := ecs.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
 	if err != nil {
 		return err
 	}
@@ -180,5 +182,5 @@ func (t *Aliyun) RebootInstance(uuid string) error {
 }
 
 func init() {
-	cloud.DefaultManager.Register(&Aliyun{})
+	cloud.DefaultManager.Register(&AliCloud{})
 }

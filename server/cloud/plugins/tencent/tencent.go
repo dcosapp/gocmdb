@@ -17,7 +17,7 @@ type TencentCloud struct {
 }
 
 func (t *TencentCloud) Type() string {
-	return "tencent"
+	return "TencentCloud"
 }
 
 func (t *TencentCloud) Name() string {
@@ -73,6 +73,7 @@ func (t *TencentCloud) GetInstance() []*cloud.Instance {
 	return rt
 }
 
+// 自定义状态
 func (t *TencentCloud) transformStatus(status string) string {
 	smap := map[string]string{
 		"PENDING":       cloud.StatusPending,
@@ -92,6 +93,7 @@ func (t *TencentCloud) transformStatus(status string) string {
 	return cloud.StatusUnknown
 }
 
+// 获取实例
 func (t *TencentCloud) getInstanceByOffsetLimit(offset, limit int64) (int64, []*cloud.Instance) {
 	client, err := cvm.NewClient(t.credential, t.region, t.profile)
 	if err != nil {

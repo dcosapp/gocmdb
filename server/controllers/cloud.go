@@ -114,7 +114,7 @@ func (c *CloudPlatformController) Modify() {
 					// 更新数据库
 					if result, err := models.DefaultCloudPlatformManager.Modify(form.Id, form.Name, form.Type, form.Addr,
 						form.Region, form.AccessKey, form.SecretKey, form.Remark); err == nil {
-						json["code"], json["text"], json["result"] = 200, "修改用户成功", result
+						json["code"], json["text"], json["result"] = 200, "修改云平台成功", result
 					} else {
 						json["code"], json["text"], json["result"] = 500, "服务器端错误", err.Error()
 					}
@@ -143,7 +143,8 @@ func (c *CloudPlatformController) Disable() {
 			json["text"] = err.Error()
 		} else {
 			if err := models.DefaultCloudPlatformManager.SetStatusById(pk, 1); err == nil {
-				json["code"], json["text"], json["result"] = 200, "用户锁定成功", nil
+				json["code"], json["text"], json["result"] = 200, "云平台禁用成功", nil
+				_, _ = models.DefaultVirtualMachineManager.DeleteById(pk)
 			} else {
 				json["code"], json["text"], json["result"] = 500, "服务器端错误", err.Error()
 			}
@@ -167,7 +168,7 @@ func (c *CloudPlatformController) Enable() {
 			json["text"] = err.Error()
 		} else {
 			if err := models.DefaultCloudPlatformManager.SetStatusById(pk, 0); err == nil {
-				json["code"], json["text"], json["result"] = 200, "用户锁定成功", nil
+				json["code"], json["text"], json["result"] = 200, "云平台启用成功", nil
 			} else {
 				json["code"], json["text"], json["result"] = 500, "服务器端错误", err.Error()
 			}
@@ -191,7 +192,8 @@ func (c *CloudPlatformController) Delete() {
 			json["text"] = err.Error()
 		} else {
 			if result, err := models.DefaultCloudPlatformManager.DeleteById(pk); err == nil {
-				json["code"], json["text"], json["result"] = 200, "用户删除成功", result
+				json["code"], json["text"], json["result"] = 200, "云平台删除成功", result
+				_, _ = models.DefaultVirtualMachineManager.DeleteById(pk)
 			} else {
 				json["code"], json["text"], json["result"] = 500, "服务器端错误", err.Error()
 			}

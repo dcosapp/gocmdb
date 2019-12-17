@@ -53,6 +53,13 @@ func (s *Session) GoToLoginPage(c *LoginRequireController) {
 
 // 登录
 func (s *Session) Login(c *AuthController) bool {
+	if session := c.GetSession("user"); session != nil {
+		if _, ok := session.(int); ok {
+			c.Redirect(beego.URLFor(beego.AppConfig.String("home")), http.StatusFound)
+			return true
+		}
+	}
+
 	form := &forms.LoginForm{}
 	valid := &validation.Validation{}
 
@@ -98,6 +105,7 @@ func (s *Token) Is(c *context.Context) bool {
 
 // 判断token是否正确
 func (s *Token) IsLogin(c *LoginRequireController) *models.User {
+	c.EnableXSRF = false
 	accessKey := strings.TrimSpace(c.Ctx.Input.Header("AccessKey"))
 	secretKey := strings.TrimSpace(c.Ctx.Input.Header("SecretKey"))
 	if token := models.DefaultTokenManager.GetByKey(accessKey, secretKey); token != nil && token.User.DeletedTime == nil {

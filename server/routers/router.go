@@ -3,6 +3,7 @@ package routers
 import (
 	"github.com/astaxie/beego"
 	"github.com/dcosapp/gocmdb/server/controllers"
+	v1 "github.com/dcosapp/gocmdb/server/controllers/api/v1"
 	"github.com/dcosapp/gocmdb/server/controllers/auth"
 )
 
@@ -29,4 +30,20 @@ func init() {
 	beego.AutoRouter(&controllers.VirtualMachinePageController{})
 	// virtualmachine/
 	beego.AutoRouter(&controllers.VirtualMachineController{})
+	// logpage/
+	beego.AutoRouter(&controllers.LogPageController{})
+	// log/
+	beego.AutoRouter(&controllers.LogController{})
+	// resourcepage/page
+	beego.AutoRouter(&controllers.ResourcePageController{})
+	// resource/page
+	beego.AutoRouter(&controllers.ResourceController{})
+
+	// v1/api/{type}/{uuid}
+	v1Namespace := beego.NewNamespace("/v1",
+		beego.NSRouter("api/heartbeat/:uuid/", &v1.APIController{}, "*:Heartbeat"),
+		beego.NSRouter("api/register/:uuid/", &v1.APIController{}, "*:Register"),
+		beego.NSRouter("api/log/:uuid/", &v1.APIController{}, "*:Log"),
+	)
+	beego.AddNamespace(v1Namespace)
 }

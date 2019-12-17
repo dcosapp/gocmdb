@@ -94,8 +94,8 @@ func (c *CloudPlatformModifyForm) Valid(v *validation.Validation) {
 
 	v.AlphaDash(c.Name, "name.name").Message("只能由大小写英文、数字、下划线和中划线组成")
 
-	v.MinSize(c.Name, 2, "name.name").Message("名称长度必须在%d到%d之间", 2, 32)
-	v.MaxSize(c.Name, 32, "name.name").Message("名称长度必须在%d到%d之间", 2, 32)
+	v.MinSize(c.Name, 5, "name.name").Message("名称长度必须在%d到%d之间", 5, 32)
+	v.MaxSize(c.Name, 32, "name.name").Message("名称长度必须在%d到%d之间", 5, 32)
 
 	if c.Name != platform.Name {
 		if _, ok := v.ErrorsMap["name"]; !ok && models.DefaultCloudPlatformManager.GetByName(c.Name) != nil {

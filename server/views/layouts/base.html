@@ -6,6 +6,7 @@
     <title>{{ config "String" "appname" "CMDB"}}</title>
     {{ assets_css "/static/css/main.css"}}
     {{ assets_css "/static/plugins/Font-Awesome-4.7.0/css/font-awesome.min.css"}}
+    {{ assets_css "/static/plugins/daterangepicker-3.0.5/daterangepicker.css"}}
     {{ .LayoutStyle }}
     <style type="text/css">
         div.dialog-content {
@@ -75,6 +76,8 @@
 {{ assets_js "/static/plugins/jquery.formatDateTime-1.1.6/dist/jquery.formatDateTime.min.js"}}
 {{ assets_js "/static/js/plugins/chart.js"}}
 {{ assets_js "/static/js/plugins/select2.min.js"}}
+{{ assets_js "/static/plugins/daterangepicker-3.0.5/moment.min.js"}}
+{{ assets_js "/static/plugins/daterangepicker-3.0.5/daterangepicker.js"}}
 
 <script type="text/javascript">
     jQuery(document).ready(function () {

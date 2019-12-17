@@ -28,6 +28,27 @@
     </ul>
 </li>
 
+<li class="treeview {{ if eq .expand `agent_management` }}is-expanded{{ end }}">
+    <a class="app-menu__item" href="#" data-toggle="treeview">
+        <i class="app-menu__icon fa fa-terminal"></i>
+        <span class="app-menu__label">终端管理</span>
+        <i class="treeview-indicator fa fa-angle-right"></i></a>
+    <ul class="treeview-menu">
+        <li>
+            <a class="treeview-item {{ if eq .menu `log_management` }}active{{ end }} "
+               href="{{ urlfor `LogPageController.Index` }}">
+                <i class="icon fa fa-file-text-o"></i>日志管理
+            </a>
+        </li>
+        <li>
+            <a class="treeview-item {{ if eq .menu `resource_management` }}active{{ end }}"
+               href="{{ urlfor `ResourcePageController.Index` }}">
+                <i class="icon fa fa-file-text"></i>客户端管理
+            </a>
+        </li>
+
+    </ul>
+</li>
 
 <li class="treeview {{ if eq .expand `system_management` }}is-expanded{{ end }}">
     <a class="app-menu__item" href="#" data-toggle="treeview">

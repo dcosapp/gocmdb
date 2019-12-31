@@ -20,7 +20,8 @@ func (p *Resource) Name() string {
 // 获取插件名称
 func (p *Resource) Init(conf *config.Config) {
 	p.conf = conf
-	p.interval = time.Hour
+	//p.interval = time.Hour
+	p.interval = time.Minute
 	p.nextTime = time.Now()
 }
 

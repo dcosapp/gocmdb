@@ -148,3 +148,16 @@ func (c *LogController) List() {
 	}
 	c.ServeJSON()
 }
+
+// log/trend 监控数据获取接口
+func (c *LogController) Trend() {
+	uuid := strings.TrimSpace(c.GetString("uuid"))
+	// []*VirtualMachine, total, queryTotal
+	result := models.DefaultResourceManager.Trend(uuid)
+	c.Data["json"] = map[string]interface{}{
+		"code":   200,
+		"text":   "获取成功",
+		"result": result,
+	}
+	c.ServeJSON()
+}

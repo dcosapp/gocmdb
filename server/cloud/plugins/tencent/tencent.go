@@ -97,7 +97,7 @@ func (t *TencentCloud) transformStatus(status string) string {
 func (t *TencentCloud) getInstanceByOffsetLimit(offset, limit int64) (int64, []*cloud.Instance) {
 	client, err := cvm.NewClient(t.credential, t.region, t.profile)
 	if err != nil {
-		return 0, nil //todo 通过log记录
+		return 0, nil
 	}
 
 	request := cvm.NewDescribeInstancesRequest()

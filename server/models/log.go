@@ -97,6 +97,44 @@ func (m *ResourceManager) Query(q string, start int64, length int, startTime, en
 	return result, total, qtotal
 }
 
+// 构造监控数据
+func (m *ResourceManager) Trend(uuid string) []*Resource {
+	// 查询最近一小时的内的监控数据
+	endTime := time.Now()
+	startTime := time.Now().Add(-1 * time.Hour)
+
+	ormer := orm.NewOrm()
+	queryset := ormer.QueryTable(&Resource{})
+	condition := orm.NewCondition()
+	condition = condition.And("deleted_time__isnull", true)
+	condition = condition.And("created_time__gte", startTime)
+	condition = condition.And("uuid__exact", uuid)
+
+	var items []*Resource
+	_, _ = queryset.SetCond(condition).OrderBy("created_time").All(&items)
+
+	// 生成一个key = 时间,value = resource的字典
+	var itemMapMap = make(map[string]*Resource)
+	for _, item := range items {
+		itemMapMap[item.CreatedTime.Format("2016-01-02 15:04")] = item
+	}
+
+	// 获取每分钟相对应的数据，如果未获取到，则使用0数据进行填充，数据的创建时间为对应的时间
+	var result = make([]*Resource, 0, len(items))
+	for startTime.Before(endTime) {
+		key := startTime.Format("2016-01-02 15:04")
+		if item, ok := itemMapMap[key]; ok {
+			result = append(result, item)
+		} else {
+			createTime := startTime
+			result = append(result, &Resource{CreatedTime: &createTime})
+		}
+		startTime = startTime.Add(time.Minute)
+	}
+
+	return result
+}
+
 var DefaultLogManager = NewLogManager()
 var DefaultResourceManager = NewResourceManager()
 

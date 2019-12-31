@@ -9,12 +9,14 @@ import (
 	_ "github.com/dcosapp/gocmdb/agent/plugins/init"
 	"github.com/imroc/req"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
+
 	verbose := flag.Bool("v", false, "verbose")
 	flag.Usage = func() {
 		fmt.Println("usage: agentd -h")
@@ -31,10 +33,20 @@ func main() {
 		req.Debug = false
 	}
 
-	// 初始化程序配置
-	gconf, err := config.NewConfig()
+	configReader := viper.New()
+	configReader.SetConfigName("agent")
+	configReader.SetConfigType("yaml")
+	configReader.AddConfigPath("etc/")
+	err := configReader.ReadInConfig()
 	if err != nil {
-		logrus.Error("读取配置出错:", err.Error())
+		logrus.Error("读取配置出错:", err)
+		os.Exit(-1)
+	}
+
+	// 初始化程序配置
+	gconf, err := config.NewConfig(configReader)
+	if err != nil {
+		logrus.Error("读取配置出错:", err)
 		os.Exit(-1)
 	}
 	defer func() {
@@ -44,7 +56,7 @@ func main() {
 	// 打开或生成日志文件
 	log, err := os.OpenFile(gconf.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
-		logrus.Error("打开日志文件出错:", err.Error())
+		logrus.Error("打开日志文件出错:", err)
 		os.Exit(-1)
 	}
 	defer func() {

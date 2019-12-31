@@ -46,6 +46,47 @@ func sync() {
 	}
 }
 
+func alarm() {
+
+	go func() {
+		for now := range time.Tick(time.Minute) {
+			alarm := models.DefaultAlarmSettingManager.GetById(1)
+			offlineTime := alarm.Time
+			endTime := now.Add(-time.Duration(offlineTime) * time.Minute)
+			var uuid = []orm.Params{}
+			orm.NewOrm().Raw("SELECT uuid FROM agent WHERE deleted_time IS NULL AND heartbeat_time < ?", endTime).Values(&uuid)
+			models.DefaultAlarmManager.CreateAlarm(0, uuid, fmt.Sprintf("终端离线时间超过了%d分钟", alarm.Time))
+		}
+	}()
+
+	go func() {
+		for now := range time.Tick(time.Minute) {
+			alarm := models.DefaultAlarmSettingManager.GetById(2)
+			windowTime := alarm.Time
+			cpuThreshold := alarm.Threshold
+			cpuCounter := alarm.Counter
+			startTime := now.Add(-time.Duration(windowTime) * time.Minute)
+			var uuid = []orm.Params{}
+			orm.NewOrm().Raw("SELECT uuid, count(*)  as cnt FROM resource WHERE deleted_time IS NULL AND created_time >= ? AND cpu_percent >= ? GROUP by uuid having count(*) >= ?", startTime, cpuThreshold, cpuCounter).Values(&uuid)
+			models.DefaultAlarmManager.CreateAlarm(1, uuid, fmt.Sprintf("CPU使用率在%d分钟以内,连续%d次超过%d%", alarm.Time, alarm.Counter, alarm.Threshold))
+		}
+	}()
+
+	go func() {
+		for now := range time.Tick(time.Minute) {
+			alarm := models.DefaultAlarmSettingManager.GetById(3)
+			windowTime := alarm.Time
+			ramThreshold := alarm.Threshold
+			ramCounter := alarm.Counter
+			startTime := now.Add(-time.Duration(windowTime) * time.Minute)
+			var uuid = []orm.Params{}
+			orm.NewOrm().Raw("SELECT uuid, count(*)  as cnt FROM resource WHERE deleted_time IS NULL AND created_time >= ? AND ram_percent >= ? GROUP by uuid having count(*) >= ?", startTime, ramThreshold, ramCounter).Values(&uuid)
+			models.DefaultAlarmManager.CreateAlarm(2, uuid, fmt.Sprintf("内存使用率在%d分钟以内,连续%d次超过%d%%", alarm.Time, alarm.Counter, alarm.Threshold))
+		}
+	}()
+
+}
+
 func main() {
 	// 设置命令行参数
 	h := flag.Bool("h", false, "help")
@@ -113,6 +154,7 @@ func main() {
 		beego.Informational("同步数据库")
 	default:
 		go sync()
+		go alarm()
 		beego.Run()
 	}
 }

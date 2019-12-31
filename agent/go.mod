@@ -7,4 +7,5 @@ require (
 	github.com/imroc/req v0.2.4
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/viper v1.6.1
 )

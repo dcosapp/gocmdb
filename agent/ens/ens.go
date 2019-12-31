@@ -16,14 +16,14 @@ func NewENS(conf *config.Config) *ENS {
 }
 
 func (s *ENS) Start() {
-	//req.Debug = true
+	headers := req.Header{"Token": s.conf.Token}
 	logrus.Info("ENS 开始运行")
 	go func() {
 		endpoint := fmt.Sprintf("%s/heartbeat/%s/", s.conf.Endpoint, s.conf.UUID)
 		// 从chan读数据
 		for evt := range s.conf.Heartbeat {
 			// 发送数据至server
-			response, err := req.New().Post(endpoint, req.BodyJSON(evt))
+			response, err := req.New().Post(endpoint, req.BodyJSON(evt), headers)
 			if err == nil {
 				result := map[string]interface{}{}
 				response.ToJSON(&result)
@@ -39,7 +39,7 @@ func (s *ENS) Start() {
 		// 从chan读数据
 		for evt := range s.conf.Register {
 			// 发送数据至server
-			response, err := req.New().Post(endpoint, req.BodyJSON(evt))
+			response, err := req.New().Post(endpoint, req.BodyJSON(evt), headers)
 			if err == nil {
 				result := map[string]interface{}{}
 				response.ToJSON(&result)
@@ -55,7 +55,7 @@ func (s *ENS) Start() {
 		// 从chan读数据
 		for evt := range s.conf.Log {
 			// 发送数据至server
-			response, err := req.New().Post(endpoint, req.BodyJSON(evt))
+			response, err := req.New().Post(endpoint, req.BodyJSON(evt), headers)
 			if err == nil {
 				result := map[string]interface{}{}
 				response.ToJSON(&result)

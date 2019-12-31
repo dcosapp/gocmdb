@@ -30,7 +30,7 @@
 
 <li class="treeview {{ if eq .expand `agent_management` }}is-expanded{{ end }}">
     <a class="app-menu__item" href="#" data-toggle="treeview">
-        <i class="app-menu__icon fa fa-terminal"></i>
+        <i class="app-menu__icon fa fa-laptop"></i>
         <span class="app-menu__label">终端管理</span>
         <i class="treeview-indicator fa fa-angle-right"></i></a>
     <ul class="treeview-menu">
@@ -46,7 +46,27 @@
                 <i class="icon fa fa-file-text"></i>客户端管理
             </a>
         </li>
+    </ul>
+</li>
 
+<li class="treeview {{ if eq .expand `alarm_management` }}is-expanded{{ end }}">
+    <a class="app-menu__item" href="#" data-toggle="treeview">
+        <i class="app-menu__icon fa fa-bell"></i>
+        <span class="app-menu__label">告警管理</span>
+        <i class="treeview-indicator fa fa-angle-right"></i></a>
+    <ul class="treeview-menu">
+        <li>
+            <a class="treeview-item {{ if eq .menu `view_alarm` }}active{{ end }} "
+               href="{{ urlfor `AlarmPageController.Index` }}">
+                <i class="icon fa fa-file-text-o"></i>查看告警
+            </a>
+        </li>
+        <li>
+            <a class="treeview-item {{ if eq .menu `alarm_setting` }}active{{ end }}"
+               href="{{ urlfor `AlarmSettingPageController.Index` }}">
+                <i class="icon fa fa-file-text"></i>告警设置
+            </a>
+        </li>
     </ul>
 </li>
 
@@ -62,12 +82,5 @@
                 <i class="icon fa fa-users"></i>用户管理
             </a>
         </li>
-        <li>
-            <a class="treeview-item {{ if eq .menu `alarm_settings` }}active{{ end }}"
-               href="https://fontawesome.com/v4.7.0/icons/" target="_blank" rel="noopener">
-                <i class="icon fa fa-bell"></i>告警设置
-            </a>
-        </li>
-
     </ul>
 </li>

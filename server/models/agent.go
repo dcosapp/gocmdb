@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	"time"
@@ -21,10 +22,25 @@ type Agent struct {
 	BootTime *time.Time `orm:"column(boot_time);null;"json:"boot_time"`
 	Time     *time.Time `orm:"column(time);null;"json:"time"`
 
-	HeartbeatTime *time.Time `orm:"column(heartbeat_time);null;"json:"heartbeat_time"`
-	CreatedTime   *time.Time `orm:"column(created_time);auto_now_add;"json:"created_time"`
-	DeletedTime   *time.Time `orm:"column(deleted_time);null;"json:"deleted_time"`
-	IsOnline      bool       `json:"is_online"`
+	HeartbeatTime *time.Time         `orm:"column(heartbeat_time);null;"json:"heartbeat_time"`
+	CreatedTime   *time.Time         `orm:"column(created_time);auto_now_add;"json:"created_time"`
+	DeletedTime   *time.Time         `orm:"column(deleted_time);null;"json:"deleted_time"`
+	IsOnline      bool               `json:"is_online"`
+	IPList        []string           `orm:"-";json:"ip_list"`
+	Disks         map[string]float64 `orm:"-";json:"disks"`
+}
+
+func (a *Agent) Path() {
+	if time.Since(*a.HeartbeatTime) < 5*time.Minute {
+		a.IsOnline = true
+	}
+	if a.IP != "" {
+		json.Unmarshal([]byte(a.IP), &a.IPList)
+	}
+	if a.Disk != "" {
+		json.Unmarshal([]byte(a.Disk), &a.Disks)
+	}
+
 }
 
 type AgentManager struct{}
@@ -81,9 +97,12 @@ func (m *AgentManager) Query(q string, start int64, length int) ([]*Agent, int64
 	}
 
 	var result []*Agent
-
 	qtotal, _ := queryset.SetCond(condition).Count()
 	_, _ = queryset.SetCond(condition).Limit(length).Offset(start).All(&result)
+
+	for _, agent := range result {
+		agent.Path()
+	}
 	return result, total, qtotal
 }
 

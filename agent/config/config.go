@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -25,11 +26,29 @@ type Config struct {
 	Log       chan interface{}
 }
 
-func NewConfig() (*Config, error) {
+func NewConfig(configReader *viper.Viper) (*Config, error) {
 	// 程序相关配置
-	UUIDFile := "agentd.uuid"
-	PidFile := "agentd.pid"
-	LogFile := "logs/agent.log"
+	UUIDFile := configReader.GetString("uuidfile")
+	if UUIDFile == "" {
+		UUIDFile = "agent.uuid"
+	}
+
+	PidFile := configReader.GetString("pidfile")
+	if PidFile == "" {
+		PidFile = "agentd.pid"
+	}
+
+	LogFile := configReader.GetString("pidfile")
+	if LogFile == "" {
+		LogFile = "logs/agent.log"
+	}
+
+	Endpoint := configReader.GetString("endpoint")
+	if Endpoint == "" {
+		Endpoint = "http://localhost:8080/v1/api"
+	}
+
+	Token := configReader.GetString("token")
 
 	UUID := ""
 	if cxt, err := ioutil.ReadFile(UUIDFile); err == nil {
@@ -43,8 +62,9 @@ func NewConfig() (*Config, error) {
 
 	PID := os.Getegid()
 	_ = ioutil.WriteFile(PidFile, []byte(strconv.Itoa(PID)), os.ModePerm)
-	return &Config{ // todo 修改配置从conf文件里面读取
-		Endpoint:  "http://localhost:8080/v1/api",
+	return &Config{
+		Endpoint:  Endpoint,
+		Token:     Token,
 		UUID:      UUID,
 		UUIDFile:  UUIDFile,
 		LogFile:   LogFile,
